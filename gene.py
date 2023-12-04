@@ -4,7 +4,9 @@ import numpy as np
 import matplotlib.colors as mcolors
 from matplotlib.patches import Rectangle
 import copy
+import networkx as nx
 
+id_counter = 0 
 class Operation:
     def __init__(self, shape_name, rotation, flip, position):
         self.shape_name = shape_name
@@ -50,7 +52,6 @@ cmap = mcolors.LinearSegmentedColormap.from_list('custom_map', color_list)
 
 error_num = 0
 
-
 operationses = []
 
 non_empty_cells_list = []
@@ -88,9 +89,46 @@ def create_operation(shape, rotation, flip, start_pos_x, start_pos_y):
         "shape_name": shape,
         "rotation": rotation,
         "flip": flip,
-        "position": (start_pos_x, start_pos_y)
+        "position": (start_pos_x, start_pos_y),
+        "parents": []  # This line was added
     }
     return operation
+
+# 各操作に一意のIDを割り当てる
+id_counter = 0
+for operations in operationses:
+    for operation in operations:
+        operation['id'] = id_counter
+        id_counter += 1
+
+# 交叉や突然変異の際に、新たな操作がどの操作から派生したかを記録する
+def crossover(op1, op2):
+    global id_counter  # この行を追加
+    crossover_point = len(op1) // 2
+    new_op1 = op1[:crossover_point] + op2[crossover_point:]
+    new_op2 = op2[:crossover_point] + op1[crossover_point:]
+    for operation in new_op1[crossover_point:]:
+        operation['id'] = id_counter
+        if 'id' in op1[0] and 'id' in op2[0]:  # This line was added
+            operation['parents'] = [op1[0]['id'], op2[0]['id']]
+        id_counter += 1
+    for operation in new_op2[crossover_point:]:
+        operation['id'] = id_counter
+        if 'id' in op1[0] and 'id' in op2[0]:  # This line was added
+            operation['parents'] = [op1[0]['id'], op2[0]['id']]
+        id_counter += 1
+    return new_op1, new_op2
+
+def mutate(op):
+    global id_counter  # 追加
+    idx = random.choice(range(len(op)))
+    op[idx]['rotation'] = random.choice([0, 90, 180, 270])
+    op[idx]['flip'] = random.choice(["none", "horizontal", "vertical", "both"])
+    op[idx]['position'] = (random.randint(0, 7), random.randint(0, 7))
+    op[idx]['id'] = id_counter
+    op[idx]['parents'] = [op[idx]['id']]
+    id_counter += 1
+    return op
 
 for q in range(64):
     shapes = [o, i, l, n, w, x, u, z, f, p, t, v, y]
@@ -136,9 +174,20 @@ for _ in range(2):
     selected_operations.extend([operationses[i] for i in selected_indices])
 
 def crossover(op1, op2):
+    global id_counter  # この行を追加
     crossover_point = len(op1) // 2
     new_op1 = op1[:crossover_point] + op2[crossover_point:]
     new_op2 = op2[:crossover_point] + op1[crossover_point:]
+    for operation in new_op1[crossover_point:]:
+        operation['id'] = id_counter
+        if 'id' in op1[0] and 'id' in op2[0]:  # This line was added
+            operation['parents'] = [op1[0]['id'], op2[0]['id']]
+        id_counter += 1
+    for operation in new_op2[crossover_point:]:
+        operation['id'] = id_counter
+        if 'id' in op1[0] and 'id' in op2[0]:  # This line was added
+            operation['parents'] = [op1[0]['id'], op2[0]['id']]
+        id_counter += 1
     return new_op1, new_op2
 
 new_operations = []
@@ -171,10 +220,14 @@ for _ in range(8):
     new_operations_two_point.extend([new_op1, new_op2])
 
 def mutate(op):
+    global id_counter  # 追加
     idx = random.choice(range(len(op)))
     op[idx]['rotation'] = random.choice([0, 90, 180, 270])
     op[idx]['flip'] = random.choice(["none", "horizontal", "vertical", "both"])
     op[idx]['position'] = (random.randint(0, 7), random.randint(0, 7))
+    op[idx]['id'] = id_counter
+    op[idx]['parents'] = [op[idx]['id']]
+    id_counter += 1
     return op
 
 for _ in range(16):
@@ -249,4 +302,24 @@ for i, operation in enumerate(subplot_operations):
     # サブプロット
     axs[i // 8, i % 8].imshow(field_array)
     axs[i // 8, i % 8].set_title(f"Gen {(i+1)*1}: " + str(sum([1 for row in field for cell in row if cell != "" and cell != "E"])))
+plt.show()
+
+# 最終的な解決策を特定
+final_solution = sorted(all_operations, key=lambda op: sum([1 for operation in op if operation['shape_name'] != "" and operation['shape_name'] != "E"]))[-1]
+
+# 最終的な解決策の一部となる操作のIDをリストアップ
+final_solution_ids = [op['id'] for op in final_solution]
+
+# グラフを初期化
+G = nx.DiGraph()
+
+# 最終的な解決策の一部となる操作だけをグラフに追加
+for operation in all_operations:
+    if 'id' in operation[0] and operation[0]['id'] in final_solution_ids:
+        G.add_node(operation[0]['id'])
+        for parent_id in operation[0]['parents']:
+            G.add_edge(parent_id, operation[0]['id'])
+
+# グラフを描画
+nx.draw(G, with_labels=True)
 plt.show()
