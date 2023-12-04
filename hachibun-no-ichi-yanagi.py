@@ -44,69 +44,62 @@ color_map = {"o": [255, 255, 0],
 
 shapes = [o, i, l, n, w, x, u, z, f, p, t, v, y]
 
-def perform_operations(field, operations):
+def perform_operations(field, operations, used_shapes):
     error_occurred = False
-    for _ in range(13):
-        if error_occurred:
-            break
-
-        shape = random.choice(shapes)
-        shape_name = ['o', 'i', 'l', 'n', 'w', 'x', 'u', 'z', 'f', 'p', 't', 'v', 'y'][shapes.index(shape)]
-
-        rotation = random.choice([0, 90, 180, 270])
-        for _ in range(rotation // 90):
-            shape = [list(x) for x in zip(*shape[::-1])]
-
-        flip = random.choice([True, False])
-        if flip:
-            shape = shape[::-1]
-
-        start_x = random.randint(0, len(field[0]) - len(shape[0]))
-        start_y = random.randint(0, len(field) - len(shape))
-
-        operations.append(Operation(shape_name, rotation, flip, (start_x, start_y)))
-
-        for i in range(len(shape)):
-            for j in range(len(shape[0])):
-                if field[start_y + i][start_x + j] != "":
-                    print("エラー: 既に値が存在します")
-                    error_occurred = True
-                    break
-                else:
-                    field[start_y + i][start_x + j] = shape[i][j]
-
-        if error_occurred:
+    for shape in shapes:
+        if shape in used_shapes:
             continue
 
-        image = np.zeros((len(field), len(field[0]), 3), dtype=np.uint8)
-        for i in range(len(field)):
-            for j in range(len(field[0])):
-                if field[i][j] != "":
-                    image[i, j] = color_map[field[i][j]]
+        for rotation in [0, 90, 180, 270]:
+            for flip in [True, False]:
+                for start_x in range(len(field[0]) - len(shape[0])):
+                    for start_y in range(len(field) - len(shape)):
+                        if error_occurred:
+                            return False
 
-        plt.imshow(image, extent=(0, len(field[0]), 0, len(field)))
-        plt.grid(True)
+                        shape_name = ['o', 'i', 'l', 'n', 'w', 'x', 'u', 'z', 'f', 'p', 't', 'v', 'y'][shapes.index(shape)]
 
-    for operation in operations:
-        print(operation)
+                        for _ in range(rotation // 90):
+                            shape = [list(x) for x in zip(*shape[::-1])]
 
-    return image
+                        if flip:
+                            shape = shape[::-1]
 
-fig, axs = plt.subplots(8, 8, figsize=(15, 15))
+                        operations.append(Operation(shape_name, rotation, flip, (start_x, start_y)))
 
-for i in range(8):
-    for j in range(8):
-        field = [["", "", "", "", "", "", "", ""],
-                 ["", "", "", "", "", "", "", ""],
-                 ["", "", "", "", "", "", "", ""],
-                 ["", "", "", "", "", "", "", ""],
-                 ["", "", "", "", "", "", "", ""],
-                 ["", "", "", "", "", "", "", ""],
-                 ["", "", "", "", "", "", "", ""],
-                 ["", "", "", "", "", "", "", ""]]
-        operations = []
-        image = perform_operations(field, operations)
-        axs[i, j].imshow(image, extent=(0, len(field[0]), 0, len(field)))
-        axs[i, j].grid(True)
+                        for i in range(len(shape)):
+                            for j in range(len(shape[0])):
+                                if field[start_y + i][start_x + j] != "":
+                                    error_occurred = True
+                                    break
+                                else:
+                                    field[start_y + i][start_x + j] = shape[i][j]
 
-plt.show()
+        used_shapes.append(shape)
+
+    if error_occurred:
+        return False
+    else:
+        return operations
+
+trial = 0
+while True:
+    field = [["", "", "", "", "", "", "", ""],
+             ["", "", "", "", "", "", "", ""],
+             ["", "", "", "", "", "", "", ""],
+             ["", "", "", "", "", "", "", ""],
+             ["", "", "", "", "", "", "", ""],
+             ["", "", "", "", "", "", "", ""],
+             ["", "", "", "", "", "", "", ""],
+             ["", "", "", "", "", "", "", ""]]
+    operations = []
+    used_shapes = []
+    result = perform_operations(field, operations, used_shapes)
+    if result:
+        print(f"{trial}回目の試行で成功しました。操作手順は以下の通りです。")
+        for operation in result:
+            print(operation)
+        break
+    trial += 1
+    if trial % 1000000 == 0:
+        print(f"{trial}回目の試行")
