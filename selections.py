@@ -8,36 +8,63 @@ import json
 
 from const import color_map, o, i, l, n, w, x, u, z, f, p, t, v, y, shapes
 
-def elite_selection(gen,times):
-    gen.sort(key=lambda x: x[13], reverse=True)
-    output = [{} for _ in range(times)]
-    for _ in range(times):
-        output[_] = {
+def elite_selection(gen,times,now_gen_num):
+    with open("record.json", "r") as file:
+        data = json.load(file)
+    score_key_pairs = [(sub_data["score"], key) for key, sub_data in data[str(now_gen_num -1)].items()]
+    score_key_pairs.sort(reverse=True)
+    top8_key = [key for _, key in score_key_pairs[:8]]
+
+    cp_old_gen = copy.deepcopy(gen)
+
+    return_list = []
+    for _ in range(len(top8_key)):
+        key = top8_key[_]
+        return_list.append(cp_old_gen[int(key)])
+
+        data[str(now_gen_num)][str(_)] = {
             "joint": "elite",
-            "par1": gen[_][12],
-            "num": gen[_][13],
+            "par1": int(key),
+            "score": data[str(now_gen_num -1)][str(key)]["score"]
         }
-    return output
+    
+    with open("record.json", "w") as file:
+        json.dump(data, file, indent=4)
+    return return_list
 
-def tornament_selection(old_gen,data,new_gen_num,tor_times):
+def tornament_selection(old_gen,new_gen_num,tor_times):
+    with open("record.json", "r") as file:
+        data = json.load(file)
+    cp_old_gen = copy.deepcopy(old_gen)
     return_list = []
-    output = [{} for _ in range(tor_times)]
     for _ in range(tor_times):
-        candidates = random.sample(old_gen, 4)
-        best_candidate = max(candidates, key=lambda x: x[13])
-        return_list.append(best_candidate)
+        samples = random.sample(list(enumerate(cp_old_gen)), 4)
+        samples_index = [index for index, sample in samples]
+        scores = []
+        for index in samples_index:
+            scores.append(data[str(new_gen_num -1)][str(index)]["score"])
+        max_score_index = samples_index[scores.index(max(scores))]
+        return_list.append(cp_old_gen[max_score_index])
 
-        output[_] = {
+        data[str(new_gen_num)][str(_ +8)] = {
             "joint": "tornament",
-            "par1": return_list[_][12],
-            "num": return_list[_][13]
+            "par1": max_score_index,
+            "score": max(scores)
         }
-    return output, return_list, data
+    with open("record.json", "w") as file:
+        json.dump(data, file, indent=4)
+    return return_list
 
-
-def mutation_selection(old_gen, data, new_gen_num, mut_times, cmap):
+def mutation_selection(old_gen, new_gen_num, mut_times, cmap):
+    with open("record.json", "r") as file:
+        data = json.load(file)
+    global shapes
+    cp_old_gen = copy.deepcopy(old_gen)
+    for operations in cp_old_gen:
+        if len(operations) != 13:
+            print(f"lenError: {len(operations)}")
+            print("fsefsrehrtsLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLEN")
     return_list = []
-    output = [{} for _ in range(mut_times)]
     for _ in range(mut_times):
         field = [["", "", "", "", "", "", "", ""],
                  ["", "", "", "", "", "", "", ""],
@@ -48,194 +75,160 @@ def mutation_selection(old_gen, data, new_gen_num, mut_times, cmap):
                  ["", "", "", "", "", "", "", ""],
                  ["", "", "", "", "", "", "", ""]]
 
-
-        candidate = random.sample(old_gen, 1)[0]
+        candidate = random.sample(cp_old_gen, 1)[0]
         #solo_test(candidate,0,cmap)
         random_choice = random.randint(1,3)
+        candipos = random.randint(0,11)
 
         if random_choice == 1:
-            candipos = random.randint(0,11)
             candidate[candipos][1] = random.randint(0,3)
-            rotation = candidate[candipos][1]
-            shape = candidate[candipos][0]
-            shape = np.rot90(shape, rotation)
-            print("21111111111111111111111111111x")
         elif random_choice == 2:
-            candipos = random.randint(0,11)
             candidate[candipos][2] = random.choice(["v", "h", "b", "n"])
-            shape = candidate[candipos][0]
-            print("222222222222222222222222")
         elif random_choice == 3:
-            candipos = random.randint(0,11)
-            shape = candidate[candipos][0]
-            max_xpos = len(field) - len(shape)
-            max_ypos = len(field[0]) - len(shape[0])
-            xpos = random.randint(0, max_xpos)
-            ypos = random.randint(0, max_ypos)
-            candidate[candipos][3] = [xpos,ypos]
-            print("333333333333333333333333333333")
-        if random_choice != 3:
-            try:
-                for ii in range(len(shape)):
-                    for jj in range(len(shape[0])):
-                        if shape[ii][jj] != "" and field[ii + candidate[candipos][3][0]][jj + candidate[candipos][3][1]] != "":
-                            field[ii + candidate[candipos][3][0]][jj + candidate[candipos][3][1]] = "E"
-                        elif shape[ii][jj] != "":
-                            field[ii + candidate[candipos][3][0]][jj + candidate[candipos][3][1]] = shape[ii][jj]
-            except:
-                print("error")
-                max_xpos = len(field) - len(shape)
-                max_ypos = len(field[0]) - len(shape[0])
-                xpos = random.randint(0, max_xpos)
-                ypos = random.randint(0, max_ypos)
-                candidate[candipos][3] = [xpos,ypos]
+            pass
+        
+        shape_name = candidate[candipos][0]
+        shape = np.array(shapes[shape_name])
+        rotated_shape = np.rot90(shape, candidate[candipos][1])
+        xoffset = random.randint(0, 8 - len(rotated_shape))
+        yoffset = random.randint(0, 8 - len(rotated_shape[0]))
+        position = [xoffset, yoffset]
+
+        candidate[candipos][3] = position
 
         non_empty_cells = count_non_empty_cells(candidate,cmap)
 
-        candidate.append(_)
-        candidate.append(non_empty_cells)
-
         return_list.append(candidate)
 
-        output[_] = {
+        data[str(new_gen_num)][str(_ + 16)] = {
             "joint": "mutation",
-            "par1": candidate[12],
-            "num": candidate[13]
+            "par1": candipos,
+            "score": non_empty_cells
         }
-    return output, return_list, data
+        with open("record.json", "w") as file:
+            json.dump(data, file, indent=4)
+    return return_list
+            
 
-def one_cross(old_gen, data, new_gen_num, one_times):
+def one_cross_selection(old_gen, new_gen_num, one_times):
+    with open("record.json", "r") as file:
+        data = json.load(file)
+    cp_old_gen = copy.deepcopy(old_gen)
     return_list = []
+    for operations in cp_old_gen:
+        if len(operations) != 13:
+            print(f"lenError: {len(operations)}")
+            print("LENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLENLEN")
+
     for _ in range(one_times):
-        candidates = random.sample(old_gen, 2)
-        candidate1 = candidates[0]
-        candidate2 = candidates[1]
+        samples = random.sample(list(enumerate(cp_old_gen)), 2)
+        candidate1_index, candidate1 = samples[0]
+        candidate2_index, candidate2 = samples[1]
+
         cross_point = random.randint(0,11)
         outx = []
         outy = []
         alreadyx = []
         alreadyy = []
         for til in range(cross_point):
-            outx.append(candidate1[til])
             alreadyx.append(candidate1[til][0])
+            outx.append(candidate1[til])
+
+        candidate1 = [item for item in candidate1 if item[0] not in alreadyx]
+
         for item in candidate2:
             if item[0] not in alreadyx:
                 outx.append(item)
-        for til in range(cross_point):
-            outy.append(candidate2[til])
-            alreadyy.append(candidate2[til][0])
-        for item in candidate1:
-            if item[0] not in alreadyy:
+            else:
                 outy.append(item)
+
+        candidate2 = [item for item in candidate2 if item[0] not in alreadyx]
+
+        for item in candidate1:
+            outy.append(item)
+
+        nonx = count_non_empty_cells(outx,1)
+        nony = count_non_empty_cells(outy,1)
+
         return_list.append(outx)
         return_list.append(outy)
 
-        nonx = count_non_empty_cells(outx)
-        nony = count_non_empty_cells(outy)
     
-        output[_] = {
+        data[str(new_gen_num)][str(_ + 32)] = {
             "joint": "one_cross",
-            "par1": candidate1[12],
-            "par2": candidate2[12],
-            "num": nonx
+            "par1": candidate1_index,
+            "par2": candidate2_index,
+            "score": nonx
         }
-        output[_ + one_times] = {
+        data[str(new_gen_num)][str(_ + 32 + one_times)] = {
             "joint": "one_cross",
-            "par1": candidate1[12],
-            "par2": candidate2[12],
-            "num": nony
+            "par1": candidate1_index,
+            "par2": candidate2_index,
+            "score": nony
         }
-    return output, return_list, data
+        with open("record.json", "w") as file:
+            json.dump(data, file, indent=4)
+    return return_list
 
-def two_cross(old_gen, data, new_gen_num, two_times):
+def two_cross_selection(old_gen, new_gen_num, two_times):
+    with open("record.json", "r") as file:
+        data = json.load(file)
+
+    cp_old_gen = copy.deepcopy(old_gen)
     return_list = []
     for _ in range(two_times):
-        field = [["", "", "", "", "", "", "", ""],
-                 ["", "", "", "", "", "", "", ""],
-                 ["", "", "", "", "", "", "", ""],
-                 ["", "", "", "", "", "", "", ""],
-                 ["", "", "", "", "", "", "", ""],
-                 ["", "", "", "", "", "", "", ""],
-                 ["", "", "", "", "", "", "", ""],
-                 ["", "", "", "", "", "", "", ""]]
-        
-        candidates = random.sample(old_gen, 2)
-        candidate1 = candidates[0]
-        candidate2 = candidates[1]
-        cross_point1 = random.randint(0,10)
-        cross_point2 = random.randint(cross_point1+1,11)
-        outx = []
-        outy = []
-        alreadyx = []
-        alreadyy = []
+        samples = random.sample(list(enumerate(cp_old_gen)), 2)
+        candidate1_index, candidate1 = samples[0]
+        candidate2_index, candidate2 = samples[1]
 
-        # 1つ目の交叉点までの部分を追加
-        for til in range(cross_point1):
-            outx.append(candidate1[til])
-            alreadyx.append(candidate1[til][0])
-            outy.append(candidate2[til])
-            alreadyy.append(candidate2[til][0])
+        cross_point1 = random.randint(0, len(candidate1) - 1)
+        cross_point2 = random.randint(cross_point1, len(candidate1))
 
-        # 1つ目と2つ目の交叉点の間の部分を交換して追加
-        for til in range(cross_point1, cross_point2):
-            outx.append(candidate2[til])
-            alreadyx.append(candidate2[til][0])
-            outy.append(candidate1[til])
-            alreadyy.append(candidate1[til][0])
+        # Divide candidate1 into three parts
+        part1 = candidate1[:cross_point1]
+        part2 = candidate1[cross_point1:cross_point2]
+        part3 = candidate1[cross_point2:]
 
-        # 2つ目の交叉点以降の部分を追加
-        for til in range(cross_point2, len(candidate1)):
-            outx.append(candidate1[til])
-            alreadyx.append(candidate1[til][0])
-            outy.append(candidate2[til])
-            alreadyy.append(candidate2[til][0])
+        # Create outx by combining part1, part2 from candidate2, and part3
+        outx = part1 + [item for item in candidate2 if item[0] in [x[0] for x in part2]] + part3
+
+        # Create outy by combining part1, part2 from candidate1, and part3
+        outy = part1 + part2 + [item for item in candidate2 if item[0] in [x[0] for x in part3]]
+
+        nonx = count_non_empty_cells(outx,1)
+        nony = count_non_empty_cells(outy,1)
 
         return_list.append(outx)
         return_list.append(outy)
 
-        non_empty_cells = 0
-        for __ in range(12):
-            for ii in range(len(outx[__][0])):
-                for jj in range(len(outx[__][0][0])):
-                    if outx[__][0][ii][jj] != "" and field[ii + outx[__][3][0]][jj + outx[__][3][1]] != "":
-                        field[ii + outx[__][3][0]][jj + outx[__][3][1]] = "E"
-                    elif outx[__][0][ii][jj] != "":
-                        field[ii + outx[__][3][0]][jj + outx[__][3][1]] = outx[__][0][ii][jj]
-                        non_empty_cells += 1
-        nonx = non_empty_cells
-        for __ in range(12):
-            for ii in range(len(outy[__][0])):
-                for jj in range(len(outy[__][0][0])):
-                    if outy[__][0][ii][jj] != "" and field[ii + outy[__][3][0]][jj + outy[__][3][1]] != "":
-                        field[ii + outy[__][3][0]][jj + outy[__][3][1]] = "E"
-                    elif outy[__][0][ii][jj] != "":
-                        field[ii + outy[__][3][0]][jj + outy[__][3][1]] = outy[__][0][ii][jj]
-                        non_empty_cells += 1
-        nony = non_empty_cells - nonx
-
-        output[_] = {
+        data[str(new_gen_num)][str(_ + 40)] = {
             "joint": "two_cross",
-            "par1": candidate1[12],
-            "par2": candidate2[12],
-            "num": nonx
+            "par1": candidate1_index,
+            "par2": candidate2_index,
+            "score": nonx
         }
-        output[_ + two_times] = {
+        data[str(new_gen_num)][str(_ + 40 + two_times)] = {
             "joint": "two_cross",
-            "par1": candidate1[12],
-            "par2": candidate2[12],
-            "num": nony
+            "par1": candidate1_index,
+            "par2": candidate2_index,
+            "score": nony
         }
-    return output, return_list, data
+    with open("record.json", "w") as file:
+        json.dump(data, file, indent=4)
+    return return_list
 
-def uni_cross(old_gen, data, new_gen_num, uni_times):
+def uni_cross_selection(old_gen, new_gen_num, uni_times):
+    with open("record.json", "r") as file:
+        data = json.load(file)
+    cp_old_gen = copy.deepcopy(old_gen)
     return_list = []
     for _ in range(uni_times):
-        candidates = random.sample(old_gen, 2)
-        candidate0 = candidates[0]
-        candidate1 = candidates[1]
+        samples = random.sample(list(enumerate(cp_old_gen)), 2)
+        candidate0_index, candidate0 = samples[0]
+        candidate1_index, candidate1 = samples[1]
         outx = []
         outy = []
-        name_list = [o, i, l, n, w, x, u, z, f, p, t, v, y]
+        name_list = ["o", "i", "l", "n", "w", "x", "u", "z", "f", "p", "t", "v", "y"]
 
         for name in name_list:
             if random.choice([True, False]):
@@ -248,26 +241,29 @@ def uni_cross(old_gen, data, new_gen_num, uni_times):
         return_list.append(outx)
         return_list.append(outy)
 
-        nonx = count_non_empty_cells(outx)
-        nony = count_non_empty_cells(outy)
+        nonx = count_non_empty_cells(outx,1)
+        nony = count_non_empty_cells(outy,1)
 
-        output[_] = {
+        data[str(new_gen_num)][str(_ + 48)] = {
             "joint": "uni_cross",
-            "par1": candidate0[12],
-            "par2": candidate1[12],
-            "num": nonx
+            "par1": candidate0_index,
+            "par2": candidate1_index,
+            "score": nonx
         }
-        output[_ + uni_times] = {
+        data[str(new_gen_num)][str(_ + 48 + uni_times)] = {
             "joint": "uni_cross",
-            "par1": candidate0[12],
-            "par2": candidate1[12],
-            "num": nony
+            "par1": candidate0_index,
+            "par2": candidate1_index,
+            "score": nony
         }
-    return output, return_list, data
+    with open("record.json", "w") as file:
+        json.dump(data, file, indent=4)
+    return return_list
 
 
 
 def count_non_empty_cells(operations,cmap):
+    global shapes
     field = [["", "", "", "", "", "", "", ""],
              ["", "", "", "", "", "", "", ""],
              ["", "", "", "", "", "", "", ""],
@@ -279,17 +275,9 @@ def count_non_empty_cells(operations,cmap):
     non_empty_cells = 0
     #solo_test(operations,0,cmap)
     for operation in operations:
-        # operationが整数の場合はスキップ
-        # operationが期待する形状でなければスキップ
-        if not isinstance(operation, list) or len(operation) != 4:
-            continue
-        shape, rotation, flip, position = operation
+        shape_name, rotation, flip, position = operation
 
-        # shapeがnumpy配列でない、または1次元未満の場合はスキップ
-        if not isinstance(shape, np.ndarray) or shape.ndim < 2:
-            continue
-
-        print(f"shape: {shape}")
+        shape = np.array(shapes[shape_name])
 
         if flip == "v":
             shape = np.flipud(shape)
@@ -300,14 +288,10 @@ def count_non_empty_cells(operations,cmap):
             shape = np.fliplr(shape)
         elif flip == "n":
             pass
-        print(f"rotation: {rotation}")
         shape = np.rot90(shape, rotation)
 
         for ii in range(len(shape)):
             for jj in range(len(shape[0])):
-                print(f"position: {position}")
-                print(f"ii: {ii}, jj: {jj}")
-                print(f"ii + position[0]: {ii + position[0]}, jj + position[1]: {jj + position[1]}")
                 if shape[ii][jj] != "" and field[ii + position[0]][jj + position[1]] != "":
                     field[ii + position[0]][jj + position[1]] = "E"
                 elif shape[ii][jj] != "":
