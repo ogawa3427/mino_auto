@@ -59,10 +59,12 @@ def mutation_selection(old_gen, data, new_gen_num, mut_times, cmap):
             rotation = candidate[candipos][1]
             shape = candidate[candipos][0]
             shape = np.rot90(shape, rotation)
+            print("21111111111111111111111111111x")
         elif random_choice == 2:
             candipos = random.randint(0,11)
             candidate[candipos][2] = random.choice(["v", "h", "b", "n"])
             shape = candidate[candipos][0]
+            print("222222222222222222222222")
         elif random_choice == 3:
             candipos = random.randint(0,11)
             shape = candidate[candipos][0]
@@ -71,6 +73,7 @@ def mutation_selection(old_gen, data, new_gen_num, mut_times, cmap):
             xpos = random.randint(0, max_xpos)
             ypos = random.randint(0, max_ypos)
             candidate[candipos][3] = [xpos,ypos]
+            print("333333333333333333333333333333")
         if random_choice != 3:
             try:
                 for ii in range(len(shape)):
@@ -80,6 +83,7 @@ def mutation_selection(old_gen, data, new_gen_num, mut_times, cmap):
                         elif shape[ii][jj] != "":
                             field[ii + candidate[candipos][3][0]][jj + candidate[candipos][3][1]] = shape[ii][jj]
             except:
+                print("error")
                 max_xpos = len(field) - len(shape)
                 max_ypos = len(field[0]) - len(shape[0])
                 xpos = random.randint(0, max_xpos)
@@ -273,7 +277,7 @@ def count_non_empty_cells(operations,cmap):
              ["", "", "", "", "", "", "", ""],
              ["", "", "", "", "", "", "", ""]]
     non_empty_cells = 0
-    solo_test(operations,0,cmap)
+    #solo_test(operations,0,cmap)
     for operation in operations:
         # operationが整数の場合はスキップ
         # operationが期待する形状でなければスキップ
@@ -350,7 +354,7 @@ def solo_test(operations, num, cmap):
                     field[ii + position[0]][jj + position[1]] = shape[ii][jj]
 
         field_img = [[color_map[item] for item in row] for row in field]
-        axs[index].imshow(field_img, cmap=cmap, vmin=0, vmax=255)
+        axs[index].imshow(field_img, cmap=cmap, vmin=0, vmax=155)
         axs[index].axis('off')
         axs[index].set_title(f'Operation {num}_{index}')
 
