@@ -1,0 +1,21 @@
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+
+# 8x64のグリッドを作成
+fig, axs = plt.subplots(64, 8, figsize=(15, 120))
+
+# グリッドの各セルに画像を配置
+for i in range(64):
+    for j in range(8):
+        img = mpimg.imread(f'{j}_{i}.png')  # 画像を読み込む
+        axs[i, j].imshow(img)
+        axs[i, j].axis('off')  # 軸を非表示に
+
+# 矢印を描画
+# ここでは例として (0, 0) から (1, 1) への矢印を描画しています
+axs[0, 0].annotate("", xy=(1, 1), xytext=(0, 0), 
+                   xycoords='data', 
+                   arrowprops=dict(arrowstyle="->", color='r'))
+
+# 画像として保存
+plt.savefig("grid.png")
