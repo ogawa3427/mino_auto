@@ -1,21 +1,98 @@
-import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  .grid-container {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr); /* 8列のグリッド */
+    grid-gap: 50px;
+    position: relative; /* 矢印の位置を調整するため */
+  }
+  .grid-item {
+    width: 100px; /* 画像のサイズ */
+    height: 100px;
+  }
+  .arrow {
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-bottom: 20px solid red; /* 矢印の色 */
+  }
+</style>
+</head>
+<body>
 
-# 8x64のグリッドを作成
-fig, axs = plt.subplots(64, 8, figsize=(15, 120))
+<div class="grid-container" id="grid-container">
+  <!-- ここに画像要素を配置 -->
+</div>
 
-# グリッドの各セルに画像を配置
-for i in range(64):
-    for j in range(8):
-        img = mpimg.imread(f'{j}_{i}.png')  # 画像を読み込む
-        axs[i, j].imshow(img)
-        axs[i, j].axis('off')  # 軸を非表示に
+<script>
+// 画像の配置
+let promises = [];
+for (let i = 0; i < 64; i++) {
+  for (let j = 0; j < 8; j++) {
+    const img = document.createElement('img');
+    img.src = j + '_' + i + '.png';
+    img.classList.add('grid-item');
+    img.id = `img-${j}-${i}`; // 各画像に一意のIDを付与
+    document.getElementById('grid-container').appendChild(img);
+    promises.push(new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+    }));
+  }
+}
 
-# 矢印を描画
-# ここでは例として (0, 0) から (1, 1) への矢印を描画しています
-axs[0, 0].annotate("", xy=(1, 1), xytext=(0, 0), 
-                   xycoords='data', 
-                   arrowprops=dict(arrowstyle="->", color='r'))
+// 矢印を描画する関数
+function drawArrow(parent, child) {
+  const arrow = document.createElement('div');
+  arrow.classList.add('arrow');
 
-# 画像として保存
-plt.savefig("grid.png")
+  // 矢印の位置を設定
+  const startX = parent.offsetLeft + parent.offsetWidth / 2;
+  const startY = parent.offsetTop + parent.offsetHeight / 2;
+  const endX = child.offsetLeft + child.offsetWidth / 2;
+  const endY = child.offsetTop + child.offsetHeight / 2;
+
+  // 矢印の長さと角度を計算
+  const distance = Math.hypot(endX - startX, endY - startY);
+  const angle = Math.atan2(endY - startY, endX - startX);
+
+  // 矢印のスタイルを設定
+  arrow.style.width = `${distance}px`;
+  arrow.style.height = '10px';
+  arrow.style.top = `${startY}px`;
+  arrow.style.left = `${startX}px`;
+  arrow.style.transform = `rotate(${angle}rad)`;
+
+  document.getElementById('grid-container').appendChild(arrow);
+}
+
+// すべての画像がロードされたら、JSONデータから親画像を特定し、矢印を描画
+Promise.all(promises).then(() => {
+  fetch('record.json')
+    .then(response => response.json())
+    .then(data => {
+      Object.keys(data).forEach(generation => {
+        Object.keys(data[generation]).forEach(individual => {
+          const parent1 = data[generation][individual].par1;
+          const parent2 = data[generation][individual].par2;
+          const child = individual;
+
+          // 親と子の画像要素を取得
+          const parent1Img = document.getElementById(`img-${generation-1}-${parent1}`);
+          const parent2Img = document.getElementById(`img-${generation-1}-${parent2}`);
+          const childImg = document.getElementById(`img-${generation}-${child}`);
+          // 矢印を描画
+          if (parent1Img) drawArrow(parent1Img, childImg);
+          if (parent2Img) drawArrow(parent2Img, childImg);
+        });
+      });
+    });
+});
+</script>
+
+</body>
+</html>
